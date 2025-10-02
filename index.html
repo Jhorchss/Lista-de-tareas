@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista de Tareas</title>
+  <style>
+    /* Se agregan algunos estilos a página */
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .contenedor {
+      
+      max-width: 500px;
+      margin: auto;
+      background: rgb(230, 215, 59);
+      padding: 20px;
+      border-radius: 8px;
+    }
+
+    input[type="text"] {
+      width: 70%;
+      padding: 10px;
+    }
+
+    button {
+      padding: 10px 15px;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li.completada span {
+      text-decoration: line-through;
+      color: gray;
+    }
+
+    li button {
+      background: red;
+      color: white;
+      border: none;
+      padding: 5px 8px;
+      cursor: pointer;
+      margin-left: 5px;
+      border-radius: 8px;
+    }
+
+    .editar-input {
+      width: 100%;
+      padding: 5px;
+      font-size: 1em;
+    }
+  </style>
+</head>
+<body>
+  <div class="contenedor">
+    <h1>Lista de Tareas</h1>
+    <form id="formulario-tarea">
+      <input type="text" id="entrada-tarea" placeholder="Escribe una nueva tarea..." required>
+      <button type="submit">Agregar</button>
+    </form>
+    <ul id="lista-tareas"></ul>
+  </div>
+
+  <script>
+
+    // Creamos las variables, para darle funcionamiento al form, input y boton.
+    const formularioTarea = document.getElementById('formulario-tarea');
+    const entradaTarea = document.getElementById('entrada-tarea');
+    const listaTareas = document.getElementById('lista-tareas');
+
+    let tareas = JSON.parse(localStorage.getItem('tareas')) || []; // pedimos que nos convierta a formatyo json
+
+    document.addEventListener('DOMContentLoaded', mostrarTareas); // damos funcionalidad al form para que nos muestre las tareas en forma de lista
+    formularioTarea.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const textoTarea = entradaTarea.value.trim();
+      if (textoTarea === '') return;
+
+      const nuevaTarea = { // indicamos como queremos que se muestre la tarea del usuario
+        id: Date.now(),
+        texto: textoTarea,
+        completada: false
+      };
+
+      tareas.push(nuevaTarea); // si el usuario quiere agregar una nueva tarea, la agregamos con un push
+      guardarTareas();
+      mostrarTareas();
+      entradaTarea.value = '';
+    });
+
+    function guardarTareas() { // esta función sirve para que las tareas que el usuario agregue se vayan guardando en el localStorage
+      localStorage.setItem('tareas', JSON.stringify(tareas));
+    }
+
+    function mostrarTareas() { // creamos la funcion para mostrar las tareas
+      listaTareas.innerHTML = '';
+      tareas.forEach(tarea => { // recorremos cada una con un forEach
+        const li = document.createElement('li'); // le pedimos que nos las muestre en forma de lista
+        li.className = tarea.completada ? 'completada' : ''; // y que indique si esta completada o no, con un ternario
+
+        const span = document.createElement('span'); // creamos un elemento span, que contendrá el texto
+        span.textContent = tarea.texto;
+        span.style.cursor = 'pointer'; // y que cuando el cursor se coloque sobre la tarea, se ponga como manita
+
+        span.addEventListener('click', () => alternarTarea(tarea.id)); // aqui agregamos cada tarea cuando se haga click
+
+        const botonEditar = document.createElement('button'); // creamos el boton de editar tarea y lo guardamos en una variable para darle funcionalidades y estilos
+        botonEditar.textContent = 'Editar'; // ponemos el texto que tendrá el boton significativo a lo que hace
+        botonEditar.style.background = 'pink'; // agregamos estilo al boton
+        botonEditar.addEventListener('click', () => editarTarea(tarea, span, botonEditar, botonEliminar)); // cuando piquemos en el boton editar, nos permita poner nuevo texto
+
+        const botonEliminar = document.createElement('button'); // también creamos el boton eliminar, lo guardamos en una variable para darle estilo y funcionalidad
+        botonEliminar.textContent = 'Eliminar'; // ponemos el texto que llevará el boton, significativo a lo que hará
+        botonEliminar.addEventListener('click', () => eliminarTarea(tarea.id)); // damos funcionalidad al boton, para eliminar la tarea
+        //creamos hijitos, que son los que nos muestran lo que cremos en js
+        li.appendChild(span); 
+        li.appendChild(botonEditar);
+        li.appendChild(botonEliminar);
+        listaTareas.appendChild(li);
+      });
+    }
+    // creamos la función para editar las tareas el usuario
+    function editarTarea(tarea, elementoSpan, botonEditar, botonEliminar) {
+      const input = document.createElement('input'); // cremos los elementos que se moostraran en el apartado
+      input.type = 'text'; // texto
+      input.value = tarea.texto; // valores 
+      input.classList.add('editar-input'); // y lo que se agrega en forma de lista
+
+      elementoSpan.replaceWith(input); // remplazamos el span con el input
+
+      botonEditar.textContent = 'Guardar'; // este es para que una vez que edite el usuario la tarea, pueda guardar los cambios
+      botonEditar.style.background = 'gray'; // y agregamos estilos al boton de guardar cambios
+
+      botonEliminar.disabled = true; // simplemente es para que funcione el boton, ponemos true
+
+      input.focus();
+      // damos funcionalidad al boton  de editar
+      botonEditar.onclick = () => {
+        const nuevoTexto = input.value.trim();
+        if (nuevoTexto !== '') {
+          tarea.texto = nuevoTexto;
+          guardarTareas();
+        }
+        mostrarTareas();
+      };
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          botonEditar.click();
+        }
+      });
+    }
+    // creamos la funcion para que nos muestre si la tarea esta completada o no
+    function alternarTarea(id) {
+      tareas = tareas.map(tarea =>
+        tarea.id === id ? { ...tarea, completada: !tarea.completada } : tarea
+      );
+      guardarTareas();
+      mostrarTareas();
+    }
+    // creamos la funcion eliminar tarea, para darle funcionalidad
+    function eliminarTarea(id) {
+      tareas = tareas.filter(tarea => tarea.id !== id);
+      guardarTareas();
+      mostrarTareas();
+    }
+  </script>
+</body>
+</html>
